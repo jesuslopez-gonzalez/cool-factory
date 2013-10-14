@@ -20,13 +20,15 @@ import language.experimental.macros
 import scala.annotation.StaticAnnotation
 import scala.reflect.macros.Context
 
+trait Builder[A]
+
 object Factory { 
 
   class buildable extends StaticAnnotation { 
     def macroTransform(annottees: Any*) = macro macroTransformImpl
   }
 
-  def macroTransformImpl(c: Context)(annottees: c.Expr[Any]*): c.Expr[Any] = { 
+  def macroTransformImpl(c: Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     import Flag._
 
@@ -36,12 +38,9 @@ object Factory {
     lazy val objectConstructor =
       q"""def ${nme.CONSTRUCTOR}() = { super.${nme.CONSTRUCTOR}(); () }"""
 
-    lazy val dummyDef: DefDef =
-      q"def dummy: Int = 1234567890"
-
-    val newObjectBody: List[Tree] = List(objectConstructor, dummyDef)
-    val newObjectTemplate = Template(parents, template.self, newObjectBody)
-    val newObjectDef = ModuleDef(Modifiers(), classDef.name.toTermName, newObjectTemplate)
+    val newObjectBody: List[Tree] = List(objectConstructor)
+    val newObjectTemplate = Template(List(tq"Builder[$className]"), template.self, newObjectBody)
+    val newObjectDef = ModuleDef(Modifiers(IMPLICIT), classDef.name.toTermName, newObjectTemplate)
 
     c.Expr[Any](Block(List(classDef, newObjectDef), Literal(Constant(()))))
   }

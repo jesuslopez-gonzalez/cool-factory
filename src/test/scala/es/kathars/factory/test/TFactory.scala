@@ -28,9 +28,11 @@ class TFactory extends FunSpec with ShouldMatchers {
     val a1: Int
   }
 
-  describe("Factory") { 
-    it("should create instances") { 
-      A.dummy should be(1234567890)
+  describe("Factory") {
+
+    it("should create instances") {
+
+      println(implicitly[Builder[A]])
     }
   }
 }
