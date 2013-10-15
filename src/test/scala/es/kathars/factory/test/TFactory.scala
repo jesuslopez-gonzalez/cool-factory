@@ -20,19 +20,24 @@ import org.scalatest.FunSpec
 import org.scalatest.matchers.ShouldMatchers
 
 import es.kathars.factory._
-import Factory.buildable
+import Factory.factory
 
 class TFactory extends FunSpec with ShouldMatchers {
 
-  @buildable trait A { 
+  @factory trait A { 
     val a1: Int
+  }
+
+  @factory trait B extends A {
+  	val b1: String
+  	val b2: List[Int]
   }
 
   describe("Factory") {
 
-    it("should create instances") {
-
-      println(implicitly[Builder[A]])
+    it("should create a valid apply method") {
+      A(1)             // ok
+      B(2, "", List()) // this is what we want, but we need to know A attributes 
     }
   }
 }

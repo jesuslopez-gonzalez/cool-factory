@@ -20,11 +20,11 @@ import language.experimental.macros
 import scala.annotation.StaticAnnotation
 import scala.reflect.macros.Context
 
-trait Builder[A]
+trait Factory[A]
 
 object Factory { 
 
-  class buildable extends StaticAnnotation { 
+  class factory extends StaticAnnotation { 
     def macroTransform(annottees: Any*) = macro macroTransformImpl
   }
 
@@ -36,11 +36,31 @@ object Factory {
     val Template(parents, self, body) = template
 
     lazy val objectConstructor =
-      q"""def ${nme.CONSTRUCTOR}() = { super.${nme.CONSTRUCTOR}(); () }"""
+      q"def ${nme.CONSTRUCTOR}() = { super.${nme.CONSTRUCTOR}(); () }"
 
-    val newObjectBody: List[Tree] = List(objectConstructor)
-    val newObjectTemplate = Template(List(tq"Builder[$className]"), template.self, newObjectBody)
-    val newObjectDef = ModuleDef(Modifiers(IMPLICIT), classDef.name.toTermName, newObjectTemplate)
+    lazy val applyStuff: (List[ValDef], List[ValDef]) = (body collect {
+      case param @ q"val $name: $paramType" => {
+        val paramName = newTermName(s"_${name.decoded}")
+        (q"val $paramName: $paramType", q"val $name = $paramName")
+      }
+    }).unzip
+
+    lazy val applyMethod =
+      q"def apply(..${applyStuff._1}) = new $className { ..${applyStuff._2} }"
+
+    val newObjectBody: List[Tree] = List(
+      objectConstructor, 
+      applyMethod)
+
+    val newObjectTemplate = Template(
+      List(tq"Factory[$className]"), 
+      template.self, 
+      newObjectBody)
+
+    val newObjectDef = ModuleDef(
+      Modifiers(IMPLICIT), 
+      classDef.name.toTermName, 
+      newObjectTemplate)
 
     c.Expr[Any](Block(List(classDef, newObjectDef), Literal(Constant(()))))
   }
